@@ -1,7 +1,24 @@
 var rp = require('request-promise');
+var CronJob = require('cron').CronJob;
 
 module.exports = function(robot) {
   var that = this;
+
+  var job = new CronJob({
+  	// cronTime: '00 00 17 * * 1-5',
+  	cronTime: '00 20 21 * * *',
+  	onTick: function() {
+  		console.log('ご飯に行こうよ');
+  		res.send('ご飯に行こうよ');
+    /*
+     * Runs every weekday (Monday through Friday)
+     * mt 17:00:00 PM. It does not run on Saturday or Sunday.
+     */
+  	},
+  	start: false
+  });
+  job.start();
+
   that.apiRoot = 'http://180.42.27.182/';
   that.ids = {
     'document': 10015,
