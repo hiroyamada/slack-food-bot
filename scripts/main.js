@@ -12,6 +12,15 @@ module.exports = function(robot) {
   that.recordString = '';
   that.latestRes = null;
 
+  //現在地
+  that.currentLocation = null;
+
+  //人数
+  that.numPeople = null;
+
+  //目的
+  that.purpose = [];
+
   var debugMode = true;
 
   var generateOptions = function(endPoint, body) {
@@ -143,7 +152,7 @@ module.exports = function(robot) {
     var options = generateOptions('document_analyzer/api/document', {
       'documentId': that.ids['document'],
       'categoryId': that.categoryId,
-      'text': res.match[0]
+      'text': that.recordString
     });
     return postWithRetry(res, 'document', 'document', options);
   }
@@ -173,7 +182,7 @@ module.exports = function(robot) {
           case 'nowLearning':
             that.latestRes.send('ちょっと待ってね');
             break;
-          that.latestRes.send('ERROR: ' + payload.result);
+            that.latestRes.send('ERROR: ' + payload.result);
         }
         console.log(payload);
       })
