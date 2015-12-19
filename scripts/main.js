@@ -1,16 +1,9 @@
 var rp = require('request-promise');
+var ubic_service = require('./ubic_service.js');
+var utils = require('./utils.js');
 
 module.exports = function(robot) {
   var that = this;
-  that.apiRoot = 'http://180.42.27.182/';
-  that.ids = {
-    'document': 10015,
-    'teacher': 207
-  }
-
-  that.categoryId = 203;
-  that.recordString = '';
-  that.latestRes = null;
 
   //現在地
   that.currentLocation = null;
@@ -21,168 +14,19 @@ module.exports = function(robot) {
   //目的
   that.purpose = [];
 
-  var debugMode = true;
-
-  var generateOptions = function(endPoint, body) {
-    return {
-      method: 'POST',
-      uri: that.apiRoot + endPoint,
-      body: body,
-      json: true // Automatically stringifies the body to JSON
-    };
-  }
-
-  /*
-  //現段階で抽出できたチャット内容(dataToSend)をUBICに送信。
-  var sendDataToUBIC = function(dataToSend) {
-    var options = generateOptions('document', {
-      'documentId': that.currentDocumentId,
-      'categoryId': that.categoryId,
-      'text': dataToSend
-    });
-    return rp(options)
-      .then(function(parsedBody) {
-        console.log(parsedBody);
-        return parsedBody;
-      })
-      .catch(function(err) {
-        console.log(err);
-      });
-  }
-
-  var registerTeacher = function(chatDocumentId) {
-    that.currentTeacherId += 1;
-    var options = generateOptions('teacher', {
-      'teacherId': that.currentTeacherId,
-      'documents': {
-        'relevant': [chatDocumentId]
-      },
-      'text': dataToSend,
-      'categoryId': that.categoryId
-    });
-    return rp(options)
-      .then(function(parsedBody) {
-        console.log(parsedBody);
-      })
-      .catch(function(err) {
-        console.log(err);
-      });
-  }
-  */
-
-  //現段階で抽出できたチャット内容(dataToSend)をUBICに送信。
-  var getResultsFromUBIC = function() {
-    console.log(that.ids['teacher']);
-    var options = generateOptions('relevance_evaluator/api/leaningResult', {
-      'teacherId': that.ids['teacher'],
-      'limit': 10,
-      'categoryId': that.categoryId
-    });
-    console.log(options);
-    return rp(options);
-  };
-
-  /*
-    var onSendDataComplete = function(resolve, reject, res) {
-      sendDataToUBIC(that.recordString).then(function(results) {
-        switch (results.result) {
-          case 'failed':
-            res.send('failed. incrementing the documentId');
-            that.currentDocumentId += 1;
-            onSendDataComplete(resolve, reject);
-          case 'success':
-            res.send('operation successful. Now wait for the result :)');
-            resolve();
-            break;
-            res.send('ERROR. Unknown result ' + results.result);
-        }
-      }, function(error) {
-        res.send('ERROR: ' + error);
-        reject(error);
-      });
-    }
-
-    var onRegisterTeacher = function(resolve, reject, res) {
-      registerTeacher(that.recordString).then(function(results) {
-        switch (results.result) {
-          case 'failed':
-            res.send('failed. incrementing the teacherId');
-            that.currentTeacherId += 1;
-            onSendDataComplete(resolve, reject);
-          case 'success':
-            res.send('operation successful. Now wait for the result :)');
-            resolve();
-            break;
-            res.send('ERROR. Unknown result ' + results.result);
-        }
-      }, function(error) {
-        res.send('ERROR: ' + error);
-        reject(error);
-      });
-    }
-  */
-  var postExecuter = function(resolve, reject, res, endPoint, idKey, options) {
-    // super hacky but whatever
-    options.body[idKey + 'Id'] = parseInt(that.ids[idKey]);
-    console.log(options);
-
-    rp(options).then(function(results) {
-      switch (results.result) {
-        case 'failed':
-          res.send('failed. incrementing the ' + idKey + 'Id');
-          that.ids[idKey] += 1;
-          postExecuter(resolve, reject, res, endPoint, idKey, options);
-          break;
-        case 'success':
-          console.log("id that was successful: " + that.ids[idKey]);
-          resolve();
-          break;
-          res.send('ERROR. Unknown result ' + results.result);
-      }
-    });
-  }
-
-  var postWithRetry = function(res, endpoint, idKey, options) {
-    return new Promise(function(resolve, reject) {
-      postExecuter(resolve, reject, res, endpoint, idKey, options);
-    })
-  }
-
-  var sendDataToUBICWithRetry = function(res) {
-    var options = generateOptions('document_analyzer/api/document', {
-      'documentId': that.ids['document'],
-      'categoryId': that.categoryId,
-      'text': that.recordString
-    });
-    return postWithRetry(res, 'document', 'document', options);
-  }
-
-  var registerTeacherWithRetry = function(res) {
-    console.log(that.ids['document']);
-    var options = generateOptions('relevance_evaluator/api/teacher', {
-      'teacherId': that.ids['teacher'],
-      'documents': {
-        'relevant': [parseInt(that.ids['document'])]
-      },
-      'categoryId': that.categoryId
-    });
-    console.log(options);
-    return postWithRetry(res, 'teacher', 'teacher', options);
-  }
-
   setInterval(function() {
-    if (that.waitingForResponse) {
-      getResultsFromUBIC().then(function(payload) {
+    if (ubic_service.waitingForResponse) {
+      ubic_service.getResultsFromUBIC().then(function(payload) {
         switch (payload.result) {
           case 'success':
-            that.latestRes.send('here are the results!');
-            that.latestRes.send(payload.documents);
-            that.waitingForResponse = false;
+            ubic_service.latestRes.send('here are the results!');
+            ubic_service.latestRes.send(payload.documents);
+            ubic_service.waitingForResponse = false;
             break;
           case 'nowLearning':
-            that.latestRes.send('ちょっと待ってね');
+            utils.debugSend(ubic_service.latestRes, 'ちょっと待ってね');
             break;
-            that.latestRes.send('ERROR: ' + payload.result);
+            ubic_service.latestRes.send('ERROR: ' + payload.result);
         }
         console.log(payload);
       })
@@ -190,22 +34,21 @@ module.exports = function(robot) {
   }, 1000);
 
   robot.hear(/(.+)/, function(res) {
-    if (debugMode) {
-      res.send('recording the string: ' + res.match[0]);
-    }
-    that.recordString += res.match[0];
+    utils.debugSend(res, 'recording the string: ' + res.match[0]);
+    ubic_service.recordString += res.match[0];
   });
 
   robot.hear(/どうよ/i, function(res) {
-    that.latestRes = res;
-    if (that.waitingForResponse) {
+    ubic_service.latestRes = res;
+    if (ubic_service.waitingForResponse) {
       res.send('落ち着け');
+      return;
     }
-    res.send('ちょっとまって');
-    sendDataToUBICWithRetry(res).then(function() {
-      registerTeacherWithRetry(res).then(function() {
+    res.send('ちょっとまってて');
+    ubic_service.sendDataToUBICWithRetry(res).then(function() {
+      ubic_service.registerTeacherWithRetry(res).then(function() {
         res.send('operation done!');
-        that.waitingForResponse = true;
+        ubic_service.waitingForResponse = true;
       });
     });
   });
