@@ -35,6 +35,9 @@ module.exports = function(robot) {
   //人数
   that.numPeople = null;
 
+  //メンバー
+  that.member = [];
+
   //目的
   that.purpose = [];
 
@@ -207,6 +210,13 @@ module.exports = function(robot) {
   }, 1000);
 
   robot.hear(/(.+)/, function(res) {
+  	console.log('your id: ' + res.message.user.id);
+  	res.send('your id: ' + res.message.user.id);
+  	if (!that.member.indexOf(res.message.user.id) < 1) {
+  		that.member.push(res.message.user.id);
+  		console.log('Add id: ' + res.message.user.id);
+  		res.send('Add id: ' + res.message.user.id);
+  	};  	
     if (debugMode) {
       res.send('recording the string: ' + res.match[0]);
     }
