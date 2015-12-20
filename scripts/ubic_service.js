@@ -3,8 +3,8 @@ var rp = require('request-promise');
 
 exports.apiRoot = 'http://180.42.27.182/';
 exports.ids = {
-  'document': 10015,
-  'teacher': 207
+  'document': 10056,
+  'teacher': 225
 }
 
 exports.categoryId = 203;
@@ -21,8 +21,25 @@ var generateOptions = function(endPoint, body) {
   };
 }
 
+exports.storeDebug = true;
+
 //現段階で抽出できたチャット内容(dataToSend)をUBICに送信。
 exports.getResultsFromUBIC = function() {
+  if (exports.storeDebug) {
+    return new Promise(function(resolve, reject) {
+      resolve({
+        'result': 'success',
+        'documents': [{
+          'documentId': 10026,
+          'score': 10000
+        }, {
+          'documentId': 112,
+          'score': 9000
+        }]
+      });
+    });
+  }
+
   var options = generateOptions('relevance_evaluator/api/leaningResult', {
     'teacherId': exports.ids['teacher'],
     'limit': 10,
@@ -81,4 +98,24 @@ exports.registerTeacherWithRetry = function(res) {
     'categoryId': exports.categoryId
   });
   return postWithRetry(res, 'teacher', 'teacher', options);
+}
+
+exports.initiateQuery = function(res) {
+  if (res) {
+    exports.latestRes = res;
+  }
+  exports.latestRes.send('ちょっとまってて。今計算中。。。');
+  if (exports.waitingForResponse) {
+    utils.debugSend('already waiting for response');
+    return;
+  }
+  console.log("here1");
+  exports.sendDataToUBICWithRetry(exports.latestRes).then(function() {
+    console.log("here2");
+    exports.registerTeacherWithRetry(exports.latestRes).then(function() {
+      console.log("here3");
+      exports.latestRes.send('operation done!');
+      exports.waitingForResponse = true;
+    });
+  });
 }
