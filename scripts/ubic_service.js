@@ -1,11 +1,18 @@
 var utils = require('./utils.js');
 var rp = require('request-promise');
+var fs = require('fs');
+
+exports.storeDebug = true;
 
 exports.apiRoot = 'http://180.42.27.182/';
 exports.ids = {
-  'document': 10015,
-  'teacher': 207
+  'document': 10056,
+  'teacher': 225
 }
+
+fs.readFile("./ids.json", function(err, file) {
+  exports.ids = JSON.parse(file);
+});
 
 exports.categoryId = 203;
 exports.recordString = '';
@@ -21,8 +28,24 @@ var generateOptions = function(endPoint, body) {
   };
 }
 
+
 //現段階で抽出できたチャット内容(dataToSend)をUBICに送信。
 exports.getResultsFromUBIC = function() {
+  if (exports.storeDebug) {
+    return new Promise(function(resolve, reject) {
+      resolve({
+        'result': 'success',
+        'documents': [{
+          'documentId': 10026,
+          'score': 10000
+        }, {
+          'documentId': 112,
+          'score': 9000
+        }]
+      });
+    });
+  }
+
   var options = generateOptions('relevance_evaluator/api/leaningResult', {
     'teacherId': exports.ids['teacher'],
     'limit': 10,
@@ -43,6 +66,7 @@ var postExecuter = function(resolve, reject, res, endPoint, idKey, options) {
       case 'failed':
         res.send('failed. incrementing the ' + idKey + 'Id');
         exports.ids[idKey] += 1;
+        fs.writeFile('./ids.json', JSON.stringify(exports.ids));
         postExecuter(resolve, reject, res, endPoint, idKey, options);
         break;
       case 'success':
@@ -81,4 +105,24 @@ exports.registerTeacherWithRetry = function(res) {
     'categoryId': exports.categoryId
   });
   return postWithRetry(res, 'teacher', 'teacher', options);
+}
+
+exports.initiateQuery = function(res) {
+  if (res) {
+    exports.latestRes = res;
+  }
+  exports.latestRes.send('ちょっとまってて。今計算中。。。');
+  if (exports.waitingForResponse) {
+    utils.debugSend('already waiting for response');
+    return;
+  }
+  console.log("here1");
+  exports.sendDataToUBICWithRetry(exports.latestRes).then(function() {
+    console.log("here2");
+    exports.registerTeacherWithRetry(exports.latestRes).then(function() {
+      console.log("here3");
+      exports.latestRes.send('operation done!');
+      exports.waitingForResponse = true;
+    });
+  });
 }
