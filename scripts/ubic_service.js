@@ -1,8 +1,9 @@
 var utils = require('./utils.js');
 var rp = require('request-promise');
 var fs = require('fs');
+var data_service = require('./data_service.js');
 
-exports.storeDebug = true;
+exports.storeDebug = false;
 
 exports.apiRoot = 'http://180.42.27.182/';
 exports.ids = {
@@ -31,6 +32,7 @@ var generateOptions = function(endPoint, body) {
 
 //現段階で抽出できたチャット内容(dataToSend)をUBICに送信。
 exports.getResultsFromUBIC = function() {
+  console.log("get results from UBIC");
   if (exports.storeDebug) {
     return new Promise(function(resolve, reject) {
       resolve({
@@ -41,6 +43,9 @@ exports.getResultsFromUBIC = function() {
         }, {
           'documentId': 112,
           'score': 9000
+        }, {
+          'documentId': 200,
+          'score': 8000
         }]
       });
     });
@@ -64,7 +69,7 @@ var postExecuter = function(resolve, reject, res, endPoint, idKey, options) {
     console.log("response");
     switch (results.result) {
       case 'failed':
-        res.send('failed. incrementing the ' + idKey + 'Id');
+        utils.debugSend(res, 'failed. incrementing the ' + idKey + 'Id');
         exports.ids[idKey] += 1;
         fs.writeFile('./ids.json', JSON.stringify(exports.ids));
         postExecuter(resolve, reject, res, endPoint, idKey, options);
@@ -76,6 +81,7 @@ var postExecuter = function(resolve, reject, res, endPoint, idKey, options) {
     }
   }).catch(function(error) {
     console.log(error);
+    utils.debugSend(res, error);
   });
   console.log("reaching here");
 }
@@ -126,3 +132,40 @@ exports.initiateQuery = function(res) {
     });
   });
 }
+
+exports.getNextResult = function(payload) {
+  if (payload) {
+    switch (payload.result) {
+      case 'success':
+        exports.waitingForResponse = false;
+        exports.results = payload.documents;
+        break;
+      case 'nowLearning':
+        utils.debugSend(exports.latestRes, 'ちょっと待ってね');
+        return;
+        exports.latestRes.send('ERROR: ' + payload.result);
+    }
+  }
+
+  console.log(exports.results);
+  console.log(exports.results.length);
+  if (exports.results && exports.results.length) {
+    for (var i = 0; i < exports.results.length; i++) {
+      var document_object = exports.results[i];
+      console.log(document_object);
+      var store = data_service.getStore(parseInt(document_object.documentId));
+      console.log(store);
+      if (store) {
+        exports.latestRes.send('ここなんてどうかな？');
+        exports.latestRes.send(store['review']);
+        exports.latestRes.send(store['address']);
+        exports.results = exports.results.slice(i + 1);
+        return;
+      } else {
+        continue;
+      }
+    }
+  }
+
+  exports.latestRes.send('もう候補がないよ・・・');
+};
