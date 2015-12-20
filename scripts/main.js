@@ -6,6 +6,7 @@ var utils = require('./utils.js');
 module.exports = function(robot) {
   var that = this;
 
+
   var job = new CronJob({
   	// cronTime: '00 00 17 * * 1-5',
   	cronTime: '00 20 21 * * *',
@@ -32,6 +33,7 @@ module.exports = function(robot) {
 
   //目的
   that.purpose = [];
+  that.places = ['地名','目白','めじろ','メジロ','渋谷','しぶや','シブヤ','品川','シナガワ','しながわ'];
 
   setInterval(function() {
     if (ubic_service.waitingForResponse) {
@@ -57,12 +59,26 @@ module.exports = function(robot) {
   	res.send('your id: ' + res.message.user.id);
   	if (!that.member.indexOf(res.message.user.id) < 1) {
   		that.member.push(res.message.user.id);
+  		that.numPeople = that.member.length;
   		console.log('Add id: ' + res.message.user.id);
+  		console.log('numPeople: ' + that.numPeople);
   		res.send('Add id: ' + res.message.user.id);
   	};  	
     
     utils.debugSend(res, 'recording the string: ' + res.match[0]);
     ubic_service.recordString += res.match[0];
+  });
+
+  this.places.map(function(place){
+  	robot.hear(place, function(res) {
+      console.log(res.match[0] + '駅周辺？');
+  	});
+  });
+
+  robot.hear(/行く|いく|いきたい|行きた/i, function(res) {
+  	console.log('name: ' + res.message.user.name);
+  	console.dir(res);
+  	res.send(res.message.user.name + 'なに食べたい？');
   });
 
   robot.hear(/どうよ/i, function(res) {
