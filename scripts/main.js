@@ -57,34 +57,7 @@ module.exports = function(robot) {
   //アクティブでかつ現在待ってる計算結果がある場合サーバーにリクエストを送信
   setInterval(function() {
     if (ubic_service.waitingForResponse && that.active) {
-      ubic_service.getResultsFromUBIC().then(function(payload) {
-        switch (payload.result) {
-          case 'success':
-            ubic_service.latestRes.send('ここなんてどう？');
-            ubic_service.waitingForResponse = false;
-            console.log(payload);
-            for (var i = 0; i < 10; i++) {
-              var document_object = payload.documents[i];
-              console.log(document_object);
-              var store = data_service.getStore(parseInt(document_object.documentId));
-              console.log(store);
-              if (store) {
-                console.log(store['review']);
-                ubic_service.latestRes.send(store['review']);
-                ubic_service.latestRes.send(store['address']);
-                break;
-              } else {
-                continue;
-              }
-            }
-            break;
-          case 'nowLearning':
-            utils.debugSend(ubic_service.latestRes, 'ちょっと待ってね');
-            break;
-            ubic_service.latestRes.send('ERROR: ' + payload.result);
-        }
-        console.log(payload);
-      })
+      ubic_service.getResultsFromUBIC().then(ubic_service.getNextResult);
     }
 
     if (that.active) {
@@ -95,6 +68,7 @@ module.exports = function(robot) {
   //60秒ごとに（アクティブであれば）いままでのチャット履歴をサーバーに送信
   setInterval(function() {
     if (that.active) {
+      // TODO call the function with appropriate resposne object
       ubic_service.initiateQuery
     }
   }, 60000);
@@ -127,8 +101,6 @@ module.exports = function(robot) {
       ubic_service.recordString += res.match[0];
     }
   });
-
-
 
   this.places.map(function(place){
   	robot.hear(place, function(res) {
@@ -194,14 +166,44 @@ module.exports = function(robot) {
   	};
   });
 
-  robot.hear(/予約/i, function(res) {
+
+  robot.hear(/おしえてれんな/i, function(res) {
+    if (that.active) {
+      ubic_service.initiateQuery(res);
+    }
   });
 
-  robot.hear(/activate/i, function(res) {
+  robot.hear(/他には/i, function(res) {
+    if (that.active) {
+      ubic_service.getNextResult();
+    }
+  });
+
+  robot.hear("debugon", function(res) {
+    utils.debugMode = true;
+    res.send("debug mode on");
+  });
+
+  robot.hear("debugoff", function(res) {
+    utils.debugMode = false;
+    res.send("debug mode off");
+  });
+
+  robot.hear("storedebugon", function(res) {
+    ubic_service.storeDebug = true;
+    res.send("store debug mode on");
+  });
+
+  robot.hear("storedebugoff", function(res) {
+    ubic_service.storeDebug = false;
+    res.send("store debug mode off");
+  });
+
+  robot.hear("activate", function(res) {
     that.setStatus(res, true)
   });
 
-  robot.hear(/deactivate/i, function(res) {
+  robot.hear("deactivate", function(res) {
     that.setStatus(res, false)
   });
 }
