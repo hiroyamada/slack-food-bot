@@ -114,6 +114,7 @@ module.exports = function(robot) {
   this.places.map(function(place){
   	robot.hear(place, function(res) {
       console.log(res.match[0] + '駅周辺？');
+      res.send(place + '駅周辺？');
   	});
   });
 
