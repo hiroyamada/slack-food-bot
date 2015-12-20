@@ -53,7 +53,7 @@ exports.getResultsFromUBIC = function() {
 
   var options = generateOptions('relevance_evaluator/api/leaningResult', {
     'teacherId': exports.ids['teacher'],
-    'limit': 10,
+    'limit': 200,
     'categoryId': exports.categoryId
   });
   console.log(options);
@@ -149,6 +149,7 @@ exports.getNextResult = function(payload) {
 
   console.log(exports.results);
   console.log(exports.results.length);
+  utils.debugSend(exports.latestRes, exports.results);
   if (exports.results && exports.results.length) {
     for (var i = 0; i < exports.results.length; i++) {
       var document_object = exports.results[i];
