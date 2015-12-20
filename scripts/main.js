@@ -54,14 +54,21 @@ module.exports = function(robot) {
   //アクティブかどうか
   that.active = false;
 
+  that.activeTime = 0;
+
   //アクティブでかつ現在待ってる計算結果がある場合サーバーにリクエストを送信
-  setInterval(function() {
+  setInterval(function(time) {
+  	console.log("time"+that.activeTime)
     if (ubic_service.waitingForResponse && that.active) {
       ubic_service.getResultsFromUBIC().then(ubic_service.getNextResult);
     }
 
     if (that.active) {
+      that.activeTime = that.activeTime + 5000;
 
+      if (that.activeTime > 300000 && that.isConfirmNumPeople) {
+      	// that.confirmNumPeople(that.send);
+      };
     };
   }, 5000);
 
