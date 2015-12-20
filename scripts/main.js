@@ -8,6 +8,8 @@ var place_service = require('./place_service.js');
 module.exports = function(robot) {
   data_service.loadData();
   var that = this;
+  that.send = robot.send;
+  console.log('that.send'+that.send);
 
 
   var job = new CronJob({
@@ -84,6 +86,10 @@ module.exports = function(robot) {
         console.log(payload);
       })
     }
+
+    if (that.active) {
+
+    };
   }, 5000);
 
   //60秒ごとに（アクティブであれば）いままでのチャット履歴をサーバーに送信
@@ -160,10 +166,10 @@ module.exports = function(robot) {
   	res.send(res.message.user.name + 'なに食べたい？');
   });
 
-  that.confirmNumPeople = function(res) {
+  that.confirmNumPeople = function(send) {
   	that.isConfirmNumPeople = true;
   	console.log('人数は' + that.numPeople + 'でいい？');
-  	res.send('人数は' + that.numPeople + 'でいい？');
+  	send('人数は' + that.numPeople + 'でいい？');
   }
 
   robot.hear(/どうよ/i, function(res) {
@@ -174,7 +180,7 @@ module.exports = function(robot) {
       }
   	}else{
   	  that.callUbicService = res;
-  	  that.confirmNumPeople(res);
+  	  that.confirmNumPeople(res.send);
   	};
   });
 
@@ -186,6 +192,9 @@ module.exports = function(robot) {
   	  ubic_service.initiateQuery(that.callUbicService);
   	  that.callUbicService = null;
   	};
+  });
+
+  robot.hear(/予約/i, function(res) {
   });
 
   robot.hear(/activate/i, function(res) {
