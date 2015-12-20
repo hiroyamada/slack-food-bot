@@ -1,11 +1,18 @@
 var utils = require('./utils.js');
 var rp = require('request-promise');
+var fs = require('fs');
+
+exports.storeDebug = true;
 
 exports.apiRoot = 'http://180.42.27.182/';
 exports.ids = {
   'document': 10056,
   'teacher': 225
 }
+
+fs.readFile("./ids.json", function(err, file) {
+  exports.ids = JSON.parse(file);
+});
 
 exports.categoryId = 203;
 exports.recordString = '';
@@ -21,7 +28,6 @@ var generateOptions = function(endPoint, body) {
   };
 }
 
-exports.storeDebug = true;
 
 //現段階で抽出できたチャット内容(dataToSend)をUBICに送信。
 exports.getResultsFromUBIC = function() {
@@ -60,6 +66,7 @@ var postExecuter = function(resolve, reject, res, endPoint, idKey, options) {
       case 'failed':
         res.send('failed. incrementing the ' + idKey + 'Id');
         exports.ids[idKey] += 1;
+        fs.writeFile('./ids.json', JSON.stringify(exports.ids));
         postExecuter(resolve, reject, res, endPoint, idKey, options);
         break;
       case 'success':

@@ -2,6 +2,7 @@ var rp = require('request-promise');
 var ubic_service = require('./ubic_service.js');
 var utils = require('./utils.js');
 var data_service = require('./data_service.js');
+var place_service = require('./place_service.js');
 
 module.exports = function(robot) {
   data_service.loadData();
@@ -36,6 +37,7 @@ module.exports = function(robot) {
               if (store) {
                 console.log(store['review']);
                 ubic_service.latestRes.send(store['review']);
+                ubic_service.latestRes.send(store['address']);
                 break;
               } else {
                 continue;
