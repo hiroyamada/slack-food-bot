@@ -8,8 +8,7 @@ var place_service = require('./place_service.js');
 module.exports = function(robot) {
   data_service.loadData();
   var that = this;
-  that.send = robot.send;
-  console.log('that.send'+that.send);
+  that.robot = robot;
 
 
   var job = new CronJob({
@@ -66,11 +65,15 @@ module.exports = function(robot) {
     if (that.active) {
       that.activeTime = that.activeTime + 5000;
 
-      if (that.activeTime > 300000 && that.isConfirmNumPeople) {
-      	// that.confirmNumPeople(that.send);
+      if (that.activeTime % 6000 === 0 && that.purpose.length === 0) {
+      	that.confirmPurpose(that.robot);
+      };
+
+      if (that.activeTime % 9000 === 0 && !that.isConfirmNumPeople) {
+      	that.confirmNumPeople(that.robot);
       };
     };
-  }, 5000);
+  }, 3000);
 
   //60秒ごとに（アクティブであれば）いままでのチャット履歴をサーバーに送信
   setInterval(function() {
@@ -95,7 +98,7 @@ module.exports = function(robot) {
   robot.hear(/(.+)/, function(res) {
   	console.log('your id: ' + res.message.user.id);
   	// res.send('your id: ' + res.message.user.id);
-  	if (!that.member.indexOf(res.message.user.id) < 1) {
+  	if (that.member.indexOf(res.message.user.id) === -1) {
   		that.member.push(res.message.user.id);
   		that.numPeople = that.member.length;
   		console.log('Add id: ' + res.message.user.id);
@@ -145,10 +148,17 @@ module.exports = function(robot) {
   	res.send(res.message.user.name + 'なに食べたい？');
   });
 
-  that.confirmNumPeople = function(send) {
+  that.confirmNumPeople = function(res) {
   	that.isConfirmNumPeople = true;
   	console.log('人数は' + that.numPeople + 'でいい？');
-  	send('人数は' + that.numPeople + 'でいい？');
+  	res.send('人数は' + that.numPeople + 'でいい？');
+  }
+
+  that.confirmPurpose = function(res) {
+  	if (that.purpose.length === 0) {
+  	  console.log('場所はどこがいい？');
+  	  res.send('場所はどこがいい？');
+  	};
   }
 
   robot.hear(/どうよ/i, function(res) {
@@ -159,7 +169,7 @@ module.exports = function(robot) {
       }
   	}else{
   	  that.callUbicService = res;
-  	  that.confirmNumPeople(res.send);
+  	  that.confirmNumPeople(res);
   	};
   });
 
@@ -175,9 +185,14 @@ module.exports = function(robot) {
 
 
   robot.hear(/おしえてれんな/i, function(res) {
-    if (that.active) {
-      ubic_service.initiateQuery(res);
-    }
+    if (that.isConfirmNumPeople) {
+  	  if (that.active) {
+        ubic_service.initiateQuery(res);
+      }
+  	}else{
+  	  that.callUbicService = res;
+  	  that.confirmNumPeople(res);
+  	};
   });
 
   robot.hear(/他には/i, function(res) {
