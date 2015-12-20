@@ -30,6 +30,7 @@ module.exports = function(robot) {
 
   //人数
   that.numPeople = null;
+  that.isConfirmNumPeople = false
 
   //メンバー
   that.member = [];
@@ -37,6 +38,16 @@ module.exports = function(robot) {
   //目的
   that.purpose = [];
   that.places = ['地名','目白','めじろ','メジロ','渋谷','しぶや','シブヤ','品川','シナガワ','しながわ'];
+
+  //yes
+  that.yesComments = ['yes','はい','そう'];
+
+  //no
+  that.noComments = ['no','違う','ちがう'];
+
+  //ubic_serviceを呼ぶか
+  that.callUbicService = null;
+
 
   //アクティブかどうか
   that.active = false;
@@ -96,13 +107,13 @@ module.exports = function(robot) {
 
   robot.hear(/(.+)/, function(res) {
   	console.log('your id: ' + res.message.user.id);
-  	res.send('your id: ' + res.message.user.id);
+  	// res.send('your id: ' + res.message.user.id);
   	if (!that.member.indexOf(res.message.user.id) < 1) {
   		that.member.push(res.message.user.id);
   		that.numPeople = that.member.length;
   		console.log('Add id: ' + res.message.user.id);
   		console.log('numPeople: ' + that.numPeople);
-  		res.send('Add id: ' + res.message.user.id);
+  		// res.send('Add id: ' + res.message.user.id);
   	};  	
     
     if (that.active) {
@@ -111,23 +122,70 @@ module.exports = function(robot) {
     }
   });
 
+
+
   this.places.map(function(place){
   	robot.hear(place, function(res) {
-      console.log(res.match[0] + '駅周辺？');
+      console.log(place + '駅周辺？');
+      that.purpose.push(place)
       res.send(place + '駅周辺？');
   	});
   });
 
+  this.noComments.map(function(comment){
+  	robot.hear(comment, function(res) {
+      console.log('そうか');
+      res.send('そうだね');
+  	});
+  });
+
+  this.yesComments.map(function(comment){
+  	robot.hear(comment, function(res) {
+      console.log('了解');
+      res.send('了解');
+      if (that.callUbicService) {
+  	    ubic_service.initiateQuery(that.callUbicService);
+  	    that.callUbicService = null;
+  	  };
+  	});
+  });
+
+  robot.hear(/ご飯行きたい|ごはんいきたい/i, function(res) {
+    res.send('行こう!行こう！');
+  });
+
   robot.hear(/行く|いく|いきたい|行きた/i, function(res) {
   	console.log('name: ' + res.message.user.name);
-  	console.dir(res);
+  	// console.dir(res);
   	res.send(res.message.user.name + 'なに食べたい？');
   });
 
+  that.confirmNumPeople = function(res) {
+  	that.isConfirmNumPeople = true;
+  	console.log('人数は' + that.numPeople + 'でいい？');
+  	res.send('人数は' + that.numPeople + 'でいい？');
+  }
+
   robot.hear(/どうよ/i, function(res) {
-    if (that.active) {
-      ubic_service.initiateQuery(res);
-    }
+  	console.log(that.isConfirmNumPeople);
+  	if (that.isConfirmNumPeople) {
+  	  if (that.active) {
+        ubic_service.initiateQuery(res);
+      }
+  	}else{
+  	  that.callUbicService = res;
+  	  that.confirmNumPeople(res);
+  	};
+  });
+
+  robot.hear(/[0-9]人/i, function(res) {
+  	var result = res.match[0].match(/[0-9]/i);
+  	that.numPeople = result;
+  	console.log(res.match[0]);
+  	if (that.callUbicService) {
+  	  ubic_service.initiateQuery(that.callUbicService);
+  	  that.callUbicService = null;
+  	};
   });
 
   robot.hear(/activate/i, function(res) {
